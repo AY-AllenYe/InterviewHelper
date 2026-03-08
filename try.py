@@ -18,5 +18,11 @@ total_chunk_num = int(len((speech)-1)/chunk_stride+1)
 for i in range(total_chunk_num):
     speech_chunk = speech[i*chunk_stride:(i+1)*chunk_stride]
     is_final = i == total_chunk_num - 1
-    res = model.generate(input=speech_chunk, cache=cache, is_final=is_final, chunk_size=chunk_size, encoder_chunk_look_back=encoder_chunk_look_back, decoder_chunk_look_back=decoder_chunk_look_back)
+    res = model.generate(input=speech_chunk,
+                         cache=cache,
+                         is_final=is_final,
+                         chunk_size=chunk_size,
+                         encoder_chunk_look_back=encoder_chunk_look_back, 
+                         decoder_chunk_look_back=decoder_chunk_look_back
+                         )
     print(res)
