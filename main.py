@@ -2,8 +2,14 @@ from funasr import AutoModel
 import sounddevice as sd
 import numpy as np
 import librosa
+from scipy.signal import resample_poly
 
-chunk_size = [0, 100, 5]   # 600ms
+import sys
+from utils.logger import Logger
+
+sys.stdout = Logger()
+
+chunk_size = [0, 10, 5]   # 600ms
 encoder_chunk_look_back = 4
 decoder_chunk_look_back = 1
 
@@ -15,9 +21,11 @@ asr_sample_rate = 16000
 chunk_stride = chunk_size[1] * 960
 frames_per_buffer = chunk_stride
 
+buffer = np.zeros(0, dtype=np.float32)
+
 cache = {}
 
-print("🎤 麦克风实时识别启动 (Ctrl+C 结束)")
+# print("🎤 麦克风实时识别启动 (Ctrl+C 结束)")
 
 with sd.InputStream(
         samplerate=mic_sample_rate,
@@ -30,11 +38,23 @@ with sd.InputStream(
 
         speech_chunk = audio_chunk[:, 0]
         
-        speech_chunk = librosa.resample(
-            speech_chunk,
-            orig_sr=mic_sample_rate,
-            target_sr=asr_sample_rate
-        )
+        # speech_chunk = librosa.resample(
+        #     speech_chunk,
+        #     orig_sr=mic_sample_rate,
+        #     target_sr=asr_sample_rate
+        # )
+        
+        speech_chunk = resample_poly(speech_chunk, asr_sample_rate, mic_sample_rate)
+
+        # 加入buffer
+        buffer = np.concatenate([buffer, speech_chunk])
+
+        # 不够一个ASR chunk就继续采集
+        if len(buffer) < chunk_stride:
+            continue
+
+        speech_chunk = buffer[:chunk_stride]
+        buffer = buffer[chunk_stride:]
 
         res = model.generate(
             input=speech_chunk,
