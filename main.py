@@ -25,8 +25,6 @@ buffer = np.zeros(0, dtype=np.float32)
 
 cache = {}
 
-# print("🎤 麦克风实时识别启动 (Ctrl+C 结束)")
-
 with sd.InputStream(
         samplerate=mic_sample_rate,
         channels=1,
@@ -46,10 +44,8 @@ with sd.InputStream(
         
         speech_chunk = resample_poly(speech_chunk, asr_sample_rate, mic_sample_rate)
 
-        # 加入buffer
         buffer = np.concatenate([buffer, speech_chunk])
 
-        # 不够一个ASR chunk就继续采集
         if len(buffer) < chunk_stride:
             continue
 
