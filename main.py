@@ -1,5 +1,6 @@
 from funasr import AutoModel
 import sounddevice as sd
+import soundfile
 import numpy as np
 import librosa
 from scipy.signal import resample_poly
@@ -9,21 +10,41 @@ from utils.logger import Logger
 
 sys.stdout = Logger()
 
-chunk_size = [0, 10, 5]   # 600ms
+asr_chunk_size = [0, 10, 5]
+vad_chunk_size = 200
 encoder_chunk_look_back = 4
 decoder_chunk_look_back = 1
 
-model_dir = "models/iic/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online"
-model = AutoModel(model=model_dir)
+
+# asr_model_dir = "models/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online"
+asr_model_dir = "models/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-pytorch"
+vad_model_dir = "models/speech_fsmn_vad_zh-cn-16k-common-pytorch"
+
+# model = AutoModel(
+#     model=asr_model_dir,
+#     vad_model=vad_model_dir
+# )
+
+asr_model = AutoModel(
+    model=asr_model_dir
+)
+vad_model = AutoModel(
+    model=vad_model_dir
+)
 
 mic_sample_rate = 44100
 asr_sample_rate = 16000
-chunk_stride = chunk_size[1] * 960
+chunk_stride = int(asr_chunk_size[1] * mic_sample_rate * 600 / 1000)
 frames_per_buffer = chunk_stride
+# exp_wav = 'models/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online/example/asr_example.wav'
 
 buffer = np.zeros(0, dtype=np.float32)
 
+silence_count = 0
+silence_threshold = 8  # 0.8秒静音认为一句结束
+
 cache = {}
+vad_cache = {}
 
 with sd.InputStream(
         samplerate=mic_sample_rate,
@@ -32,9 +53,9 @@ with sd.InputStream(
         blocksize=frames_per_buffer) as stream:
 
     while True:
-        audio_chunk, overflowed = stream.read(frames_per_buffer)
-
-        speech_chunk = audio_chunk[:, 0]
+        audio, overflowed = stream.read(frames_per_buffer)        
+        
+        speech_chunk = audio[:, 0]
         
         # speech_chunk = librosa.resample(
         #     speech_chunk,
@@ -44,22 +65,42 @@ with sd.InputStream(
         
         speech_chunk = resample_poly(speech_chunk, asr_sample_rate, mic_sample_rate)
 
+        # 加入buffer
         buffer = np.concatenate([buffer, speech_chunk])
 
+        # 不够一个ASR chunk就继续采集
         if len(buffer) < chunk_stride:
             continue
 
         speech_chunk = buffer[:chunk_stride]
         buffer = buffer[chunk_stride:]
+        
+        vad = vad_model.generate(input=audio, cache=vad_cache)
 
-        res = model.generate(
+        if vad == "speech_start":
+            is_speaking = True
+            speech_buffer = []
+
+        if is_speaking:
+            speech_buffer.append(audio)
+
+        if vad == "speech_end":
+            sentence_audio = concat(speech_buffer)
+
+        res = asr_model.generate(
             input=speech_chunk,
             cache=cache,
             is_final=False,
-            chunk_size=chunk_size,
-            encoder_chunk_look_back=encoder_chunk_look_back,
-            decoder_chunk_look_back=decoder_chunk_look_back
+            chunk_size=asr_chunk_size,
+            # chunk_size=vad_chunk_size,
+            # encoder_chunk_look_back=encoder_chunk_look_back,
+            # decoder_chunk_look_back=decoder_chunk_look_back
         )
+        
+        
 
         if len(res) > 0:
             print(res[0]["text"], end="", flush=True)
+        # if len(res[0]["value"]):
+        #     print(res)
+        
