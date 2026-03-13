@@ -44,7 +44,6 @@ silence_count = 0
 silence_threshold = 8  # 0.8秒静音认为一句结束
 
 cache = {}
-vad_cache = {}
 
 with sd.InputStream(
         samplerate=mic_sample_rate,
@@ -74,18 +73,6 @@ with sd.InputStream(
 
         speech_chunk = buffer[:chunk_stride]
         buffer = buffer[chunk_stride:]
-        
-        vad = vad_model.generate(input=audio, cache=vad_cache)
-
-        if vad == "speech_start":
-            is_speaking = True
-            speech_buffer = []
-
-        if is_speaking:
-            speech_buffer.append(audio)
-
-        if vad == "speech_end":
-            sentence_audio = concat(speech_buffer)
 
         res = asr_model.generate(
             input=speech_chunk,
@@ -98,6 +85,7 @@ with sd.InputStream(
         )
         
         
+
         if len(res) > 0:
             print(res[0]["text"], end="", flush=True)
         # if len(res[0]["value"]):
