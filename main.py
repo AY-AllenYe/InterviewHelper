@@ -98,7 +98,6 @@ with sd.InputStream(
         )
         
         
-
         if len(res) > 0:
             print(res[0]["text"], end="", flush=True)
         # if len(res[0]["value"]):
