@@ -19,6 +19,7 @@ decoder_chunk_look_back = 1
 # asr_model_dir = "models/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online"
 asr_model_dir = "models/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-pytorch"
 vad_model_dir = "models/speech_fsmn_vad_zh-cn-16k-common-pytorch"
+punc_model_dir = "./models/punc_ct-transformer_cn-en-common-vocab471067-large"
 
 # model = AutoModel(
 #     model=asr_model_dir,
@@ -31,6 +32,14 @@ asr_model = AutoModel(
 vad_model = AutoModel(
     model=vad_model_dir
 )
+
+model = AutoModel(
+        model=asr_model_dir,
+        vad_model=vad_model_dir,
+        punc_model=punc_model_dir,
+        # spk_model="iic/speech_campplus_sv_zh-cn_16k-common",
+        # spk_model_revision="v2.0.2",
+    )
 
 mic_sample_rate = 44100
 asr_sample_rate = 16000
@@ -74,18 +83,28 @@ with sd.InputStream(
         speech_chunk = buffer[:chunk_stride]
         buffer = buffer[chunk_stride:]
 
-        res = asr_model.generate(
+        # res = asr_model.generate(
+        #     input=speech_chunk,
+        #     cache=cache,
+        #     is_final=False,
+        #     chunk_size=asr_chunk_size,
+        #     # chunk_size=vad_chunk_size,
+        #     # encoder_chunk_look_back=encoder_chunk_look_back,
+        #     # decoder_chunk_look_back=decoder_chunk_look_back
+        # )
+        res = model.generate(
             input=speech_chunk,
             cache=cache,
-            is_final=False,
-            chunk_size=asr_chunk_size,
+            is_final=True,
+            # chunk_size=asr_chunk_size,
             # chunk_size=vad_chunk_size,
             # encoder_chunk_look_back=encoder_chunk_look_back,
             # decoder_chunk_look_back=decoder_chunk_look_back
         )
         
-        
+
         if len(res) > 0:
             print(res[0]["text"], end="", flush=True)
         # if len(res[0]["value"]):
         #     print(res)
+        
