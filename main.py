@@ -43,7 +43,7 @@ model = AutoModel(
 
 mic_sample_rate = 44100
 asr_sample_rate = 16000
-chunk_stride = int(asr_chunk_size[1] * mic_sample_rate * 600 / 1000)
+chunk_stride = int(asr_chunk_size[1] * mic_sample_rate * 200 / 1000)
 frames_per_buffer = chunk_stride
 # exp_wav = 'models/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online/example/asr_example.wav'
 
