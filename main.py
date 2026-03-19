@@ -107,4 +107,3 @@ with sd.InputStream(
             print(res[0]["text"], end="", flush=True)
         # if len(res[0]["value"]):
         #     print(res)
-        
