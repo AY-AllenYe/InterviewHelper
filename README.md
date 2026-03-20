@@ -14,7 +14,6 @@ Wish this project helps you. And your Star is really helpful.
 **2.Pre-trained Models**
 
 
-
 ```
 the file tree
 |-- (root)
